@@ -3,6 +3,12 @@ X68Key
 
 An arduino based USB keyboard adapter for the Sharp X68000
 
+**DISCLAIMER**: While I have tested this before uploading it and am using it myself, please consider this 
+initial commit of the modified code as Beta. **I cannot be held responsible if the keyboard
+suddenly decides to send a key combination you didn't type and wipes your drive.** Clearly
+I'm very confident this can't happen or I wouldn't be putting the code here! But, you know, "caveat emptor"
+and all that (look it up if you need to)...
+
 Introduction
 --
 
