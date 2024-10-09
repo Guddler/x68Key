@@ -58,6 +58,16 @@
 // all the changes from the original code. NB: Please don't pay too much attention
 // to the auto-repeat code, it could probably be much better, but it got the job done!
 
+/* FTDI
+	CTS and DTS are not present on all FTDI boards but if they are present, you'll likely need to connect them as below
+	GND	-> GND
+	CTS	-> GND
+	VCC -> VCC (3.3) can go on the pin between the Arduino and the USB host if you've soldered to the programming vcc pin
+	TX 	-> RX
+	RX	-> TX
+	DTS	-> DTS
+*/
+
 #include <hidboot.h>
 #include <usbhub.h>
 #include <SoftwareSerial.h>
@@ -405,18 +415,6 @@ void setup()
 
 void loop()
 {
-
-	/*
-	TODO:
-	- Remember the last key press
-	- Track key held timings
-	- Track initial delay vs subsequent ones
-	- On delays expiring:
-		- Call KeyUp
-		- Call KeyDown
-	- On key up reset delays
-	*/
-
 	if (KEY_ENABLE) {
 		repeatTriggered = false;
 		Usb.Task(); // Poll USB
@@ -530,13 +528,3 @@ void loop()
 	}
 
 }
-
-/* FTDI
-	CTS and DTS are not present on all FTDI boards but if they are present, you'll likely need to connect them as below
-	GND	-> GND
-	CTS	-> GND
-	VCC -> VCC (3.3) can go on the pin between the Arduino and the USB host if you've soldered to the programming vcc pin
-	TX 	-> RX
-	RX	-> TX
-	DTS	-> DTS
-*/
