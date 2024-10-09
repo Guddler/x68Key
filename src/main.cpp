@@ -87,11 +87,15 @@
 // WARNING: Who knows what commands the system will think it's receiving. No promises you won't lose disk data!
 // #define DEBUG
 
+// NB: This is temporary while I work on issues with auto-repeat
+//#define REPEAT_ENABLED 
+
 #define PRESS & ~0x80
 #define RELEASE | 0x80
 bool SHIFTED = false;
 bool KEY_ENABLE = false;
 
+#ifdef REPEAT_ENABLED
 // Auto-repeat related stuff
 uint16_t repeatDelay = 500;		// Period before we repear
 uint16_t repeatInterval = 110;	// Delay between repeats
@@ -101,6 +105,7 @@ uint32_t delayMillis = 0;
 uint8_t lastKey = 0;			// Track the last key pressed since we are going to fake key presses
 bool initialDelay = true;		// Know if we are obeying the initial delay or the shorter repeat delay
 bool repeatTriggered = false; 	// As we're calling our own callbacks, track if it was called, or triggered
+#endif
 
 SoftwareSerial x68kSerMouse(4, 5); // RX, TX (RX unused)
 
@@ -163,7 +168,7 @@ class KbdRptParser : public KeyboardReportParser
 };
 
 // If the keycode is found in the list, return the scancode that should be sent to x68k
-uint8_t KbdRptParser::doShiftOrUnshift(uint8_t list[], unsigned int size, uint8_t key)
+uint8_t KbdRptParser::doShiftOrUnshift(uint8_t *list, unsigned int size, uint8_t key)
 {
 	for (unsigned int i = 0; i < size; i += 2)
 	{
@@ -235,10 +240,11 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
 				Serial.write(keymapping[key] PRESS);
 			}
 		}
-
+#ifdef REPEAT_ENABLED
 		lastKey = key;
 		delayMillis = 0;
 		previousMillis = millis();
+#endif
 	}
 }
 
@@ -331,10 +337,12 @@ void KbdRptParser::OnKeyUp(uint8_t mod, uint8_t key)
 	}
 	else if (key < sizeof(keymapping))
 	{
+#ifdef REPEAT_ENABLED
 		if (!repeatTriggered) {
 			lastKey = 0;
 			initialDelay = true;
 		}
+#endif
 
 		// We need all the same logic here as when keys are pressed otherwise we can leave keys hanging
 		// and the machine seems to get really upset. DOS doesn't seem to care too much but programs like
@@ -387,6 +395,18 @@ HIDBoot<USB_HID_PROTOCOL_MOUSE> HidMouse(&Usb);
 KbdRptParser KbdPrs;
 MouseRptParser MousePrs;
 
+void resetRepeat()
+{
+#ifdef REPEAT_ENABLED
+	initialDelay = true;
+	delayMillis = 0;
+	currentMillis = 0;
+	previousMillis = 0;
+	lastKey = 0;
+	repeatTriggered = false;
+#endif
+}
+
 void setup()
 {
 	Serial.begin(2400);
@@ -407,18 +427,18 @@ void setup()
 	HidKeyboard.SetReportParser(0, &KbdPrs);
 	HidMouse.SetReportParser(0, &MousePrs);
 
-	lastKey = 0;
-	delayMillis = 0;
-	repeatTriggered = false;
-	previousMillis = millis();
+	resetRepeat();
 }
 
 void loop()
 {
 	if (KEY_ENABLE) {
+#ifdef REPEAT_ENABLED 
 		repeatTriggered = false;
+#endif
 		Usb.Task(); // Poll USB
 
+#ifdef REPEAT_ENABLED
 		if (lastKey > 0) {
 			// Sort out delay / repeat
 			currentMillis = millis();
@@ -437,6 +457,7 @@ void loop()
 				initialDelay = false;
 			}
 		}
+#endif
 	}
 
 	while (Serial.available() > 0) // Read from Keyboard serial port - to determine whether to poll mouse or not
@@ -494,15 +515,19 @@ void loop()
 				// We don't care about any of these
 				break;
 			case 0x60:
+#ifdef REPEAT_ENABLED
 				// Repeat delay - 200 + (0x0n * 100) in ms
 				repeatDelay = ((rxbyte & 0x0F) * 100) + 200;
+#endif
 #ifdef DEBUG
 						sprintf(msg, "Delay: %dms", repeatDelay);
 #endif
 				break;
 			case 0x70:
+#ifdef REPEAT_ENABLED
 				// Repeat interval = 30 + (rep time squared) * 5 in ms
 				repeatInterval = (((rxbyte & 0x0F) * (rxbyte & 0x0F)) * 5) + 30;
+#endif
 #ifdef DEBUG
 					sprintf(msg, "Repeat: %dms", repeatInterval);
 #endif
@@ -512,12 +537,20 @@ void loop()
 				break;
 			case 0xF0:
 				// FD, DF handshake at poweron, FF at power off
+				if (rxbyte == 0xFD)
+				{
+					resetRepeat();
 #ifdef DEBUG
-					if (rxbyte == 0xFD)
-						sprintf(msg, "Hello keyboard");
-					else if (rxbyte == 0xFF)
-						sprintf(msg, "Bye for now");
+					sprintf(msg, "Hello keyboard");
 #endif
+				}
+				else if (rxbyte == 0xFF)
+				{
+					resetRepeat();
+#ifdef DEBUG
+					sprintf(msg, "Bye for now");
+#endif
+				}
 				break;
 		}
 
