@@ -201,7 +201,9 @@ void KbdRptParser::OnKeyDown(uint8_t mod, uint8_t key)
 				// of the physical keyboard. An example would be the ^. On a PC keyboard, this is shift 6
 				// but on an X68000 it is unshifted (the ^~ key).
 				Serial.write(SHIFT_SCAN RELEASE); // undo shift
+				delay(25);
 				Serial.write(unshiftKey PRESS);
+				delay(25);
 				Serial.write(SHIFT_SCAN PRESS); // reapply shift
 			}
 			else
