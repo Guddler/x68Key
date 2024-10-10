@@ -2,6 +2,8 @@
  * Keyboard layout info moved from the original main file since we are now catering for 2 or more 
  * different layouts. For original info and attribution please see the header in main.cpp
  * 
+ * This layout has been developed and tested against a UK layout Logi K270 Keyboard from the MK270 set.
+ * 
  * @file layout_uk.h
  * @author Martin White
  * @brief Keyboard layout info.
